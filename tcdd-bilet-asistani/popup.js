@@ -22,6 +22,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const soundToggle = document.getElementById("soundToggle");
   const testSoundBtn = document.getElementById("testSoundBtn");
 
+  const autoLoginToggle = document.getElementById("autoLoginToggle");
+  const loginInputsBody = document.getElementById("loginInputsBody");
+  const tcddEmailInput = document.getElementById("tcddEmailInput");
+  const tcddPasswordInput = document.getElementById("tcddPasswordInput");
+  const togglePasswordBtn = document.getElementById("togglePasswordBtn");
+
   const toggleTrackingBtn = document.getElementById("toggleTrackingBtn");
   const manualCheckBtn = document.getElementById("manualCheckBtn");
 
@@ -119,6 +125,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     "minSeats",
     "wagonType",
     "soundEnabled",
+    "autoLoginEnabled",
+    "tcddEmail",
+    "tcddPassword",
     "lastScanTime",
     "nextScanTimestamp",
     "totalScannedCount",
@@ -128,6 +137,19 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   fromInput.value = stored.fromStation || "ANKARA GAR";
   toInput.value = stored.toStation || "İSTANBUL(SÖĞÜTLÜÇEŞME)";
+
+  // TCDD Otomatik Kullanıcı Girişi Bilgileri
+  const autoLogin = Boolean(stored.autoLoginEnabled);
+  if (autoLoginToggle) autoLoginToggle.checked = autoLogin;
+  if (loginInputsBody) {
+    if (autoLogin) {
+      loginInputsBody.classList.remove("hidden");
+    } else {
+      loginInputsBody.classList.add("hidden");
+    }
+  }
+  if (tcddEmailInput) tcddEmailInput.value = stored.tcddEmail || "";
+  if (tcddPasswordInput) tcddPasswordInput.value = stored.tcddPassword || "";
 
   dateMode = stored.dateMode || "single";
 
@@ -356,6 +378,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     el.addEventListener("change", saveCurrentConfig);
   });
 
+  // TCDD Otomatik Giriş Olay Dinleyicileri
+  if (autoLoginToggle) {
+    autoLoginToggle.addEventListener("change", () => {
+      if (loginInputsBody) {
+        if (autoLoginToggle.checked) {
+          loginInputsBody.classList.remove("hidden");
+        } else {
+          loginInputsBody.classList.add("hidden");
+        }
+      }
+      saveCurrentConfig();
+    });
+  }
+
+  if (togglePasswordBtn && tcddPasswordInput) {
+    togglePasswordBtn.addEventListener("click", () => {
+      if (tcddPasswordInput.type === "password") {
+        tcddPasswordInput.type = "text";
+        togglePasswordBtn.textContent = "🙈";
+      } else {
+        tcddPasswordInput.type = "password";
+        togglePasswordBtn.textContent = "👁️";
+      }
+    });
+  }
+
+  if (tcddEmailInput) {
+    tcddEmailInput.addEventListener("input", saveCurrentConfig);
+  }
+  if (tcddPasswordInput) {
+    tcddPasswordInput.addEventListener("input", saveCurrentConfig);
+  }
+
   function getCurrentConfig() {
     return {
       fromStation: fromInput.value.trim(),
@@ -368,7 +423,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       timeFilter: timeFilterSelect.value,
       minSeats: parseInt(minSeatsInput.value, 10) || 1,
       wagonType: wagonTypeSelect.value,
-      soundEnabled: soundToggle.checked
+      soundEnabled: soundToggle.checked,
+      autoLoginEnabled: autoLoginToggle ? autoLoginToggle.checked : false,
+      tcddEmail: tcddEmailInput ? tcddEmailInput.value.trim() : "",
+      tcddPassword: tcddPasswordInput ? tcddPasswordInput.value : ""
     };
   }
 

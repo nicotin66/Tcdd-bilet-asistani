@@ -201,6 +201,40 @@
         </div>
       </div>
 
+      <!-- TCDD Otomatik Kullanıcı Girişi -->
+      <div class="input-card login-card">
+        <div class="card-header-toggle" id="loginHeaderToggle">
+          <div class="card-header-left">
+            <span class="icon">👤</span>
+            <div class="card-title-group">
+              <span class="card-title">TCDD Otomatik Giriş</span>
+              <span class="card-subtitle">Yönlendirmede hesaba otomatik giriş yapar</span>
+            </div>
+          </div>
+          <label class="toggle-switch mini-toggle" title="Otomatik girişi aç / kapat">
+            <input type="checkbox" id="autoLoginToggle">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="login-inputs-body" id="loginInputsBody">
+          <div class="form-group" style="margin-top: 8px;">
+            <label for="tcddEmailInput">TCDD E-Posta Adresi</label>
+            <input type="email" id="tcddEmailInput" placeholder="ornek@email.com" autocomplete="username">
+          </div>
+          <div class="form-group" style="margin-top: 6px;">
+            <label for="tcddPasswordInput">TCDD Şifresi</label>
+            <div class="password-wrapper">
+              <input type="password" id="tcddPasswordInput" placeholder="••••••••" autocomplete="current-password">
+              <button type="button" class="btn-eye" id="togglePasswordBtn" title="Şifreyi Göster / Gizle">👁️</button>
+            </div>
+          </div>
+          <div class="login-secure-badge">
+            <span>🔒 Bilgileriniz yalnızca kendi bilgisayarınızda (Chrome yerel hafızasında) saklanır.</span>
+          </div>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div class="action-buttons-wrapper">
         <button type="button" id="toggleTrackingBtn" class="primary-btn start-state">
