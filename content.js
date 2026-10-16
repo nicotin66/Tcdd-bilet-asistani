@@ -128,6 +128,9 @@
   // Handle /koltuk-haritasi if directly navigated (4. Görsel Kontrolü)
   if (window.location.pathname.includes("koltuk-haritasi")) {
     handleKoltukHaritasiPage();
+    setTimeout(() => {
+      checkAndPerformAutoLogin();
+    }, 600);
   }
 
   // Message Listener
@@ -405,6 +408,11 @@
           </button>
         </div>
 
+        <!-- TCDD Otomatik Giriş Butonu -->
+        <button type="button" id="tcddPanelLoginBtn" style="background: rgba(31, 111, 235, 0.15); border: 1px solid #1f6feb; color: #58a6ff; font-weight: 600; font-size: 11px; padding: 4px 8px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 6px; display: flex; align-items: center; justify-content: center; gap: 5px;" title="TCDD hesabınıza tek tıkla veya otomatik giriş yapar">
+          👤 TCDD'ye Giriş Yap (Otomatik)
+        </button>
+
         <!-- Bulunan Seferler Başlığı -->
         <div class="tcdd-results-header">
           <span>🎉 BULUNAN BOŞ SEFERLER</span>
@@ -672,6 +680,32 @@
         updatePanelStatus("Otomatik takip durduruldu", false);
       }
     };
+
+    // Panel Login Button
+    const panelLoginBtn = document.getElementById("tcddPanelLoginBtn");
+    if (panelLoginBtn) {
+      if (isUserAlreadyLoggedIn()) {
+        panelLoginBtn.textContent = "✅ TCDD Hesabı Açık";
+        panelLoginBtn.style.borderColor = "#238636";
+        panelLoginBtn.style.color = "#3fb950";
+      }
+
+      panelLoginBtn.onclick = async () => {
+        panelLoginBtn.disabled = true;
+        panelLoginBtn.textContent = "⏳ Giriş Yapılıyor...";
+        await checkAndPerformAutoLogin(true);
+        setTimeout(() => {
+          panelLoginBtn.disabled = false;
+          if (isUserAlreadyLoggedIn()) {
+            panelLoginBtn.textContent = "✅ TCDD Hesabı Açık";
+            panelLoginBtn.style.borderColor = "#238636";
+            panelLoginBtn.style.color = "#3fb950";
+          } else {
+            panelLoginBtn.textContent = "👤 TCDD'ye Giriş Yap (Otomatik)";
+          }
+        }, 2000);
+      };
+    }
   }
 
   function detectRouteFromPage(fromEl, toEl) {
@@ -2213,25 +2247,120 @@
     return false;
   }
 
-  function isUserAlreadyLoggedIn() {
-    const headerEl = document.querySelector("header, nav, .navbar, .top-header, #header") || document.body;
-    const txt = (headerEl ? headerEl.innerText : document.body.innerText) || "";
+  // =========================================================================
+  // 9. TCDD E-POSTA İLE OTOMATİK KULLANICI GİRİŞİ SİSTEMİ
+  // =========================================================================
+  async function checkAndPerformAutoLogin(force = false) {
+    try {
+      const stored = await chrome.storage.local.get(["autoLoginEnabled", "tcddEmail", "tcddPassword"]);
+      if (!stored.autoLoginEnabled || !stored.tcddEmail || !stored.tcddPassword) {
+        console.log("👤 TCDD: Otomatik giriş kapalı veya e-posta/şifre kaydedilmemiş.");
+        return false;
+      }
 
-    if (txt.includes("Çıkış Yap") || txt.includes("Çıkış") || txt.includes("Hesabım") || txt.includes("Profilim")) {
-      const hasLoginBtn = Array.from(document.querySelectorAll("header button, nav button, header a, nav a, .navbar a, .navbar button"))
-        .some(el => {
-          const t = (el.innerText || "").trim().toUpperCase();
-          return t === "GİRİŞ YAP" || t === "GİRİŞ" || t === "ÜYE GİRİŞİ";
+      // 1. Zaten oturum açılmış mı kontrol et
+      if (!force && isUserAlreadyLoggedIn()) {
+        console.log("👤 TCDD: Kullanıcı oturumu zaten açık.");
+        return true;
+      }
+
+      // 2. Sayfada #btnLogin (ÜYE GİRİŞİ) butonunu bul
+      const btnLogin = document.getElementById("btnLogin") ||
+        Array.from(document.querySelectorAll("button, a, .btn")).find(b => {
+          const t = (b.innerText || b.textContent || "").trim().toUpperCase();
+          return t === "ÜYE GİRİŞİ" || t === "GİRİŞ YAP";
         });
-      if (!hasLoginBtn) return true;
+
+      // 3. Ekranda giriş inputları açık mı kontrol et
+      let inputs = findLoginInputs();
+
+      // Eğer inputlar ekranda yoksa ve #btnLogin varsa tıkla ve açılmasını bekle
+      if ((!inputs.email || !inputs.password) && btnLogin) {
+        console.log("👉 TCDD #btnLogin (ÜYE GİRİŞİ) butonuna tıklandı:", btnLogin);
+        btnLogin.scrollIntoView({ block: "nearest" });
+        btnLogin.focus();
+        btnLogin.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+        btnLogin.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+        btnLogin.click();
+        btnLogin.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+
+        // Dropdown menünün ve inputların DOM'a gelmesini bekle (en fazla 2 sn)
+        const waitDrop = Date.now();
+        while (Date.now() - waitDrop < 2000) {
+          await sleep(60);
+          inputs = findLoginInputs();
+          if (inputs.email && inputs.password) break;
+        }
+      }
+
+      if (!inputs.email || !inputs.password) {
+        console.warn("⚠️ TCDD giriş kutucukları bulunamadı.");
+        return false;
+      }
+
+      console.log(`👤 TCDD Otomatik Giriş başlatılıyor: ${stored.tcddEmail}`);
+      showInPageToast(`👤 TCDD hesabına otomatik giriş yapılıyor (${stored.tcddEmail})...`);
+      updatePanelStatus(`👤 TCDD hesabına giriş yapılıyor...`, true);
+
+      // 4. Vue reaktivitesi için Native Setter ile değerleri yerleştir
+      setNativeInputValue(inputs.email, stored.tcddEmail);
+      await sleep(150);
+      setNativeInputValue(inputs.password, stored.tcddPassword);
+      await sleep(250);
+
+      // 5. Giriş Yap / Submit butonunu bul ve tıkla
+      const submitBtn = findLoginSubmitBtn(inputs.email);
+      if (submitBtn) {
+        console.log("👉 TCDD 'Giriş Yap' butonuna tıklandı:", submitBtn);
+        submitBtn.scrollIntoView({ block: "nearest" });
+        submitBtn.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+        submitBtn.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+        submitBtn.click();
+        submitBtn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+
+        showInPageToast(`✅ TCDD Giriş Formu Gönderildi! Lütfen bekleyin...`);
+        updatePanelStatus(`✅ TCDD Giriş yapılıyor...`, true);
+
+        // Giriş sonrası durum kontrolü
+        setTimeout(() => {
+          if (isUserAlreadyLoggedIn()) {
+            showInPageToast(`🎉 TCDD Hesabına Başarıyla Giriş Yapıldı!`);
+            updatePanelStatus(`🎉 TCDD Hesabı Açık (${stored.tcddEmail})`, true);
+          }
+        }, 2000);
+
+        return true;
+      }
+    } catch (err) {
+      console.error("checkAndPerformAutoLogin hatası:", err);
+    }
+    return false;
+  }
+
+  function isUserAlreadyLoggedIn() {
+    // 1. Sayfada #btnLogin veya "ÜYE GİRİŞİ" butonu görünüyorsa KESİNLİKLE oturum AÇILMAMIŞTIR!
+    const btnLogin = document.getElementById("btnLogin") ||
+      Array.from(document.querySelectorAll("button, a, .btn")).find(b => {
+        const t = (b.innerText || b.textContent || "").trim().toUpperCase();
+        return t === "ÜYE GİRİŞİ" || t === "GİRİŞ YAP";
+      });
+    if (btnLogin && (btnLogin.offsetWidth > 0 || btnLogin.offsetHeight > 0)) {
+      return false; // Oturum kesinlikle kapalı!
     }
 
-    const userProfileEl = document.querySelector("[selenium-test*='profile'], [selenium-test*='user-name'], .user-profile, .user-name, .profile-name, [class*='userDropdown']");
-    if (userProfileEl && userProfileEl.innerText.trim().length > 1) {
+    // 2. Kullanıcı profil adı veya menüsü var mı?
+    const userMenu = document.querySelector(".user-profile, .user-name, [class*='userDropdown'], [id*='userDropdown'], [selenium-test*='user-profile']");
+    if (userMenu && userMenu.innerText.trim().length > 1) {
       return true;
     }
 
-    return false;
+    // 3. Buton veya link olarak 'Çıkış Yap' veya 'Oturumu Kapat' var mı?
+    const hasLogout = Array.from(document.querySelectorAll("button, a")).some(el => {
+      const t = (el.innerText || el.textContent || "").trim().toUpperCase();
+      return t === "ÇIKIŞ YAP" || t === "OTURUMU KAPAT";
+    });
+
+    return hasLogout;
   }
 
   function findLoginInputs() {
@@ -2240,85 +2369,50 @@
       return el.offsetWidth > 0 || el.offsetHeight > 0 || (el.offsetParent !== null && window.getComputedStyle(el).display !== "none");
     };
 
-    const emailSelectors = [
-      "input[type='email']",
-      "input[selenium-test*='email' i]",
-      "input[selenium-test*='username' i]",
-      "input[selenium-test*='kullanici' i]",
-      "input[name*='email' i]",
-      "input[name*='username' i]",
-      "input[id*='email' i]",
-      "input[id*='username' i]",
-      "input[placeholder*='posta' i]",
-      "input[placeholder*='kullanıcı' i]",
-      "input[placeholder*='e-mail' i]",
-      "input[type='text'][autocomplete*='username' i]"
-    ];
+    // Açık dropdown veya modal içindeki inputları ara
+    const container = document.querySelector(".dropdown-menu.show, .dropdown.show, .modal.show, [role='dialog'], form") || document;
 
-    let emailInput = null;
-    for (const sel of emailSelectors) {
-      const candidates = Array.from(document.querySelectorAll(sel));
-      emailInput = candidates.find(isVisible) || candidates[0];
-      if (emailInput && isVisible(emailInput)) break;
-    }
+    const emailInputs = Array.from(container.querySelectorAll("input:not([type='password']):not([type='checkbox']):not([type='hidden'])")).filter(isVisible);
+    const passInputs = Array.from(container.querySelectorAll("input[type='password']")).filter(isVisible);
 
-    const passSelectors = [
-      "input[type='password']",
-      "input[selenium-test*='password' i]",
-      "input[selenium-test*='sifre' i]",
-      "input[name*='password' i]",
-      "input[name*='sifre' i]",
-      "input[id*='password' i]",
-      "input[id*='sifre' i]",
-      "input[placeholder*='şifre' i]",
-      "input[placeholder*='sifre' i]"
-    ];
-
-    let passwordInput = null;
-    for (const sel of passSelectors) {
-      const candidates = Array.from(document.querySelectorAll(sel));
-      passwordInput = candidates.find(isVisible) || candidates[0];
-      if (passwordInput && isVisible(passwordInput)) break;
-    }
-
-    return { email: emailInput, password: passwordInput };
-  }
-
-  function tryOpenLoginModal() {
-    const loginCandidates = Array.from(document.querySelectorAll("header button, header a, nav button, nav a, .navbar button, .navbar a, [selenium-test*='login' i], [selenium-test*='giris' i], button.btnLogin, #btnLogin, a.btn-login, button, a"));
-    const btn = loginCandidates.find(el => {
-      const t = (el.innerText || el.textContent || "").trim().toUpperCase();
-      const sel = (el.getAttribute("selenium-test") || "").toLowerCase();
+    let email = emailInputs.find(el => {
+      const p = (el.placeholder || "").toLowerCase();
+      const n = (el.name || "").toLowerCase();
       const id = (el.id || "").toLowerCase();
-      const cls = (el.className || "").toLowerCase();
+      return p.includes("posta") || p.includes("mail") || n.includes("email") || id.includes("email") || id.includes("username");
+    }) || emailInputs[0] || null;
 
-      if (sel.includes("login") || sel.includes("giris") || id.includes("login") || cls.includes("login")) return true;
-      return t === "GİRİŞ YAP" || t === "ÜYE GİRİŞİ" || t === "GİRİŞ";
-    });
+    let password = passInputs[0] || null;
 
-    if (btn) {
-      console.log("👉 Giriş Yap butonuna tıklandı:", btn);
-      btn.click();
-      btn.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
-      return true;
+    // Fallback: document genelinde ara
+    if (!email) {
+      const allEmails = Array.from(document.querySelectorAll("input[type='email'], input[placeholder*='Posta' i], input[placeholder*='posta' i], input[id*='email' i], input[id*='username' i]")).filter(isVisible);
+      email = allEmails[0] || null;
     }
-    return false;
+    if (!password) {
+      const allPass = Array.from(document.querySelectorAll("input[type='password']")).filter(isVisible);
+      password = allPass[0] || null;
+    }
+
+    return { email, password };
   }
 
-  function ensureUyeGirisiTabActive() {
-    const tabs = Array.from(document.querySelectorAll("button, a, .nav-link, [role='tab'], li"));
-    const uyeTab = tabs.find(t => {
-      const txt = (t.innerText || "").trim().toUpperCase();
-      return txt === "ÜYE GİRİŞİ" || txt.includes("ÜYE GİRİŞ");
+  function findLoginSubmitBtn(nearElement) {
+    const container = nearElement?.closest(".dropdown-menu, form, .modal, [role='dialog']") || document;
+    const btns = Array.from(container.querySelectorAll("button, input[type='submit'], a.btn"));
+
+    let btn = btns.find(b => {
+      const cls = (b.className || "").toLowerCase();
+      const sel = (b.getAttribute("selenium-test") || "").toLowerCase();
+      const txt = (b.innerText || b.value || "").trim().toUpperCase();
+      return cls.includes("btnsign") || sel.includes("login") || txt === "GİRİŞ YAP" || txt === "GİRİŞ";
     });
-    if (uyeTab) {
-      const isActive = uyeTab.classList.contains("active") || uyeTab.getAttribute("aria-selected") === "true";
-      if (!isActive) {
-        console.log("👉 'Üye Girişi' sekmesi seçildi");
-        uyeTab.click();
-        uyeTab.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      }
+
+    if (!btn) {
+      btn = document.querySelector("button.btnSign, button[selenium-test*='login-btn'], button[type='submit']");
     }
+
+    return btn;
   }
 
   function setNativeInputValue(element, value) {
@@ -2340,26 +2434,6 @@
     element.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
     element.dispatchEvent(new KeyboardEvent("keyup", { bubbles: true, cancelable: true }));
     element.blur();
-  }
-
-  function findLoginSubmitBtn(nearElement) {
-    const formOrModal = nearElement?.closest("form, .modal, .modal-content, [role='dialog'], .login-container, .card") || document;
-    const btns = Array.from(formOrModal.querySelectorAll("button, input[type='submit'], a.btn"));
-
-    let btn = btns.find(b => {
-      const sel = (b.getAttribute("selenium-test") || "").toLowerCase();
-      const type = (b.getAttribute("type") || "").toLowerCase();
-      return sel.includes("login-btn") || sel.includes("btn-login") || sel.includes("btnlogin") || (type === "submit" && !b.disabled);
-    });
-
-    if (!btn) {
-      btn = btns.find(b => {
-        const txt = (b.innerText || b.value || "").trim().toUpperCase();
-        return (txt === "GİRİŞ YAP" || txt === "GİRİŞ" || txt.includes("GİRİŞ YAP")) && !b.disabled;
-      });
-    }
-
-    return btn;
   }
 
   function sleep(ms) {
