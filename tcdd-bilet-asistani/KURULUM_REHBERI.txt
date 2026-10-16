@@ -1,0 +1,43 @@
+=========================================================
+🚄 TCDD BİLET AVCISI - HIZLI KURULUM REHBERİ (10 SANİYE)
+=========================================================
+
+Bu eklenti Google Chrome, Microsoft Edge ve Brave tarayıcılarında 
+TCDD hızlı tren biletlerini otomatik taramak ve boş koltuk 
+bulunduğunda sesli/görsel bildirim verip tek tıkla koltuğu 
+seçmenizi sağlamak için geliştirilmiştir.
+
+---------------------------------------------------------
+📌 KURULUM ADIMLARI:
+---------------------------------------------------------
+
+1. Bu zip dosyasını sağ tıklayıp "Tümünü Ayıkla" (Klasöre Çıkart) 
+   diyerek masaüstünüze çıkartın.
+
+2. Google Chrome (veya Edge) tarayıcınızı açın.
+
+3. Adres çubuğuna şunu yazıp Enter'a basın:
+   chrome://extensions/
+
+4. Sayfanın sağ üst köşesindeki "Geliştirici Modu" (Developer Mode) 
+   düğmesini AÇIK konuma getirin.
+
+5. Sol üstte beliren "Paketlenmemiş öğe yükle" butonuna tıklayın.
+
+6. Zipten çıkarttığınız "tcdd-bilet-asistani" klasörünü seçip 
+   "Klasör Seç"e basın.
+
+🎉 TEBRİKLER! Eklenti yüklendi!
+
+---------------------------------------------------------
+🚀 NASIL KULLANILIR?
+---------------------------------------------------------
+1. https://ebilet.tcddtasimacilik.gov.tr/ adresine gidin.
+2. Ekranın sağ tarafında "TCDD Bilet Avcısı" paneli otomatik açılır.
+3. Gitmek istediğiniz istasyonları, tarihi veya tarih aralığını seçin.
+4. "⚡ Şimdi Tara" veya "▶ Otomatik Takip" butonuna basın.
+5. Boş koltuk çıktığında eklenti alarm çalar, "🟢 Koltuğa Git"e 
+   bastığınızda doğrudan koltuk haritasına yönlendirir.
+
+İyi yolculuklar! 🚆
+=========================================================

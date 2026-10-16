@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TCDD Bilet Avcısı</title>
+  <link rel="stylesheet" href="popup.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <div class="logo-icon-wrapper">
+          <img src="icons/icon48.png" alt="TCDD Avcısı" class="logo-img">
+          <span class="status-dot-pulse" id="headerStatusDot"></span>
+        </div>
+        <div class="logo-text">
+          <h1>TCDD Bilet Avcısı</h1>
+          <p class="subtitle">Otomatik Koltuk Takip Asistanı</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <button type="button" class="btn-quick-reload" id="quickReloadBtn" title="Eklentiyi tek tıkla yeniden başlatır / günceller (Uzantılar sayfasına gitmenize gerek kalmaz)">
+          <span class="reload-icon">🔄</span> Yenile
+        </button>
+        <span class="badge" id="appStatusBadge">Hazır</span>
+      </div>
+    </header>
+
+    <!-- GitHub Update Banner (Otomatik Güncelleme Bildirimi) -->
+    <div id="githubUpdateBanner" class="github-update-banner hidden">
+      <div class="update-banner-left">
+        <span class="update-pulse-icon">🚀</span>
+        <div class="update-info">
+          <div class="update-title"><strong id="updateVerTag">v1.0.2</strong> Çıktı!</div>
+          <div class="update-desc" id="updateChangelog">Yeni güncellemeler hazır.</div>
+        </div>
+      </div>
+      <div class="update-banner-right">
+        <button type="button" class="btn-update-now" id="btnUpdateNow" title="GitHub'dan son sürümü açar ve günceller">⚡ Güncelle</button>
+        <button type="button" class="btn-update-dismiss" id="btnUpdateDismiss" title="Kapat">&times;</button>
+      </div>
+    </div>
+
+    <!-- Quick Route Chips -->
+    <div class="quick-routes-section">
+      <span class="section-label">Hızlı Rotalar:</span>
+      <div class="route-chips">
+        <button type="button" class="chip-btn" data-from="SORGUN YHT" data-to="ANKARA GAR">Sorgun ➔ Ankara</button>
+        <button type="button" class="chip-btn" data-from="ANKARA GAR" data-to="SORGUN YHT">Ankara ➔ Sorgun</button>
+        <button type="button" class="chip-btn" data-from="YOZGAT" data-to="ANKARA GAR">Yozgat ➔ Ankara</button>
+        <button type="button" class="chip-btn" data-from="ANKARA GAR" data-to="YOZGAT">Ankara ➔ Yozgat</button>
+        <button type="button" class="chip-btn" data-from="ANKARA GAR" data-to="İSTANBUL(SÖĞÜTLÜÇEŞME)">Ankara ➔ Söğütlüçeşme</button>
+        <button type="button" class="chip-btn" data-from="İSTANBUL(SÖĞÜTLÜÇEŞME)" data-to="ANKARA GAR">Söğütlüçeşme ➔ Ankara</button>
+        <button type="button" class="chip-btn" data-from="ANKARA GAR" data-to="ESKİŞEHİR">Ankara ➔ Eskişehir</button>
+        <button type="button" class="chip-btn" data-from="KONYA" data-to="İSTANBUL(SÖĞÜTLÜÇEŞME)">Konya ➔ İstanbul</button>
+      </div>
+    </div>
+
+    <!-- Datalist Fallback for Native Autocomplete -->
+    <datalist id="stationsDatalist">
+      <option value="ANKARA GAR">Ankara</option>
+      <option value="SORGUN YHT">Yozgat / Sorgun</option>
+      <option value="YOZGAT">Yozgat</option>
+      <option value="AKDAĞMADENİ YHT">Yozgat</option>
+      <option value="YERKÖY YHT">Yozgat</option>
+      <option value="SİVAS">Sivas</option>
+      <option value="KIRIKKALE">Kırıkkale</option>
+      <option value="ESKİŞEHİR">Eskişehir</option>
+      <option value="KONYA">Konya</option>
+      <option value="KARAMAN">Karaman</option>
+      <option value="İSTANBUL(SÖĞÜTLÜÇEŞME)">İstanbul</option>
+      <option value="İSTANBUL(HALKALI)">İstanbul</option>
+      <option value="İSTANBUL(PENDİK)">İstanbul</option>
+      <option value="İSTANBUL(BAKIRKÖY)">İstanbul</option>
+      <option value="İZMİT YHT">Kocaeli</option>
+      <option value="GEBZE">Kocaeli</option>
+      <option value="İZMİR(BASMANE)">İzmir</option>
+      <option value="KAYSERİ">Kayseri</option>
+    </datalist>
+
+    <!-- Main Config Form -->
+    <main class="form-container">
+      <!-- Stations Row -->
+      <div class="input-card stations-card">
+        <div class="form-group station-group">
+          <label for="fromStationInput">
+            <span class="icon">📍</span> Kalkış (Nereden)
+          </label>
+          <div class="autocomplete-wrapper">
+            <input type="text" id="fromStationInput" placeholder="Örn: İSTANBUL(SÖĞÜTLÜÇEŞME) veya ANKARA GAR" autocomplete="off" required>
+            <div id="fromStationDropdown" class="autocomplete-dropdown hidden"></div>
+          </div>
+        </div>
+
+        <div class="swap-row">
+          <div class="swap-line"></div>
+          <button type="button" id="swapStationsBtn" class="swap-btn" title="İstasyonları Değiştir">
+            ⇄
+          </button>
+          <div class="swap-line"></div>
+        </div>
+
+        <div class="form-group station-group">
+          <label for="toStationInput">
+            <span class="icon">🏁</span> Varış (Nereye)
+          </label>
+          <div class="autocomplete-wrapper">
+            <input type="text" id="toStationInput" placeholder="Örn: SORGUN YHT veya YOZGAT" autocomplete="off" required>
+            <div id="toStationDropdown" class="autocomplete-dropdown hidden"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Date Options -->
+      <div class="input-card date-card">
+        <div class="date-mode-tabs">
+          <button type="button" class="tab-btn active" id="tabSingleDate">Tek Tarih</button>
+          <button type="button" class="tab-btn" id="tabDateRange">Tarih Aralığı (Çoklu Gün)</button>
+        </div>
+
+        <div class="date-inputs-row" id="singleDateRow">
+          <div class="form-group">
+            <label for="startDateInput">Yolculuk Tarihi</label>
+            <input type="date" id="startDateInput" required>
+          </div>
+        </div>
+
+        <div class="date-inputs-row hidden" id="rangeDateRow">
+          <div class="form-group">
+            <label for="rangeStartInput">Başlangıç Tarihi</label>
+            <input type="date" id="rangeStartInput">
+          </div>
+          <div class="form-group">
+            <label for="rangeEndInput">Bitiş Tarihi</label>
+            <input type="date" id="rangeEndInput">
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Settings -->
+      <div class="input-card settings-card">
+        <div class="settings-grid">
+          <div class="form-group">
+            <label for="intervalSelect">
+              <span class="icon">⏱️</span> Tarama Sıklığı
+            </label>
+            <select id="intervalSelect">
+              <option value="1">1 Dakika (Hızlı Test)</option>
+              <option value="3">3 Dakika</option>
+              <option value="5">5 Dakika</option>
+              <option value="10" selected>10 Dakika (Önerilen)</option>
+              <option value="15">15 Dakika</option>
+              <option value="30">30 Dakika</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="timeFilterSelect">
+              <span class="icon">🕒</span> Saat Tercihi
+            </label>
+            <select id="timeFilterSelect">
+              <option value="all">Tüm Gün (Farketmez)</option>
+              <option value="morning">Sabah (06:00 - 12:00)</option>
+              <option value="afternoon">Öğleden Sonra (12:00 - 18:00)</option>
+              <option value="evening">Akşam (18:00 - 23:59)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="minSeatsInput">
+              <span class="icon">💺</span> Min. Boş Yer
+            </label>
+            <input type="number" id="minSeatsInput" value="1" min="1" max="10">
+          </div>
+
+          <div class="form-group">
+            <label for="wagonTypeSelect">
+              <span class="icon">🚆</span> Vagon Tercihi
+            </label>
+            <select id="wagonTypeSelect">
+              <option value="all">Farketmez (Tümü)</option>
+              <option value="economy">Ekonomi (2+2)</option>
+              <option value="business">Business (2+1)</option>
+              <option value="sleeper">Yataklı / Kuşetli</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toggles-row">
+          <label class="toggle-switch">
+            <input type="checkbox" id="soundToggle" checked>
+            <span class="slider"></span>
+            <span class="toggle-label">🔔 Sesli Alarm</span>
+          </label>
+          <button type="button" id="testSoundBtn" class="link-btn">Sesi Dene 🔊</button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons-wrapper">
+        <button type="button" id="toggleTrackingBtn" class="primary-btn start-state">
+          <span class="btn-icon">▶</span>
+          <span class="btn-text">Otomatik Takibi Başlat</span>
+        </button>
+        <button type="button" id="manualCheckBtn" class="secondary-btn" title="Hemen şimdi tara">
+          ⚡ Şimdi Tara
+        </button>
+      </div>
+
+      <!-- Status & Countdown Info Bar -->
+      <div class="status-infobar" id="statusInfoBar">
+        <div class="info-item">
+          <span class="label">Son Tarama:</span>
+          <span class="val" id="lastScanTime">-</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Sonraki:</span>
+          <span class="val" id="countdownVal">-</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Taranan:</span>
+          <span class="val" id="totalScannedCount">0 Sefer</span>
+        </div>
+      </div>
+
+      <!-- Found Tickets Live Section -->
+      <div class="found-section" id="foundSection">
+        <div class="found-header">
+          <h3>🎉 Bulunan Boş Koltuklar</h3>
+          <span class="count-badge" id="foundCountBadge">0</span>
+        </div>
+        <div class="found-list" id="foundList">
+          <div class="empty-placeholder" id="emptyPlaceholder">
+            <div class="placeholder-icon">🔍</div>
+            <p>Henüz boş koltuk yakalanmadı.</p>
+            <span class="subtext">Arka planda kontrol devam ettikçe bulunan biletler burada listelenir.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Log / Activity History (Collapsible) -->
+      <details class="logs-accordion">
+        <summary>
+          <span>📜 Canlı İşlem Günlüğü</span>
+          <button type="button" id="clearLogsBtn" class="mini-btn">Temizle</button>
+        </summary>
+        <div class="logs-console" id="logsConsole">
+          <div class="log-entry info">Sistem hazır. Aramak istediğiniz güzergahı ve tarihi seçin.</div>
+        </div>
+      </details>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-links">
+        <a href="https://ebilet.tcddtasimacilik.gov.tr" target="_blank" id="openTcddDirectLink">TCDD E-Bilet Sitesini Aç ↗</a>
+      </div>
+      <p class="copyright">TCDD Bilet Avcısı v1.0 • Otomatik Takip Sistemi</p>
+    </footer>
+  </div>
+
+  <script src="stations.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
